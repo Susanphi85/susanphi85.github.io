@@ -1,3 +1,45 @@
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyA82wlKjcC0cJwA_Ms0DGDQvRcQ8_2NJ50",
+    authDomain: "mantenimiento-309c1.firebaseapp.com",
+    projectId: "mantenimiento-309c1",
+    storageBucket: "mantenimiento-309c1.firebasestorage.app",
+    messagingSenderId: "230217690394",
+    appId: "1:230217690394:web:ff8e9a21207778909510a3"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+</script>
+const db = getFirestore(app);
+import { collection, addDoc } from "firebase/firestore";
+
+async function guardarTarea(tarea) {
+  try {
+    const docRef = await addDoc(collection(db, "tareas"), {
+      nombre: tarea,
+      fecha: new Date()
+    });
+    console.log("Documento escrito con ID: ", docRef.id);
+  } catch (e) {
+    console.error("Error al añadir documento: ", e);
+  }
+}
+import { collection, getDocs } from "firebase/firestore";
+
+async function cargarTareas() {
+  const querySnapshot = await getDocs(collection(db, "tareas"));
+  querySnapshot.forEach((doc) => {
+    console.log(`${doc.id} => ${doc.data().nombre}`);
+  });
+}
+document.addEventListener("DOMContentLoaded", cargarTareas);
 // =======================================================
 // CONFIGURACIÓN DE FIREBASE (PEGA TUS CLAVES AQUÍ)
 // =======================================================

@@ -1,24 +1,199 @@
 // =======================================================
-// CONFIGURACIÓN Y ESTADO
+// CONFIGURACIÓN DE FIREBASE (PEGA TUS CLAVES AQUÍ)
 // =======================================================
-// Puedes cambiar la clave del supervisor modificando este valor:
-const SUPERVISOR_PIN = "ENGIE2026"; // Cambiar a tu PIN deseado
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROYECTO.firebaseapp.com",
+  databaseURL: "https://TU_PROYECTO-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "TU_PROYECTO",
+  storageBucket: "TU_PROYECTO.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const tasksRef = db.ref('maintenanceTasks');
+
+const SUPERVISOR_PIN = "ENGIE2026";
 let isAdmin = false;
 
-let tasks = JSON.parse(localStorage.getItem('maintenanceTasks')) || [];
+let tasks = [];
 
-function saveTasks() {
-  localStorage.setItem('maintenanceTasks', JSON.stringify(tasks));
+// =======================================================
+// SINCRONIZACIÓN EN TIEMPO REAL
+// =======================================================
+function setSyncStatus(text, color) {
+  const el = document.getElementById('syncStatus');
+  if (el) {
+    el.textContent = text;
+    el.style.color = color;
+  }
 }
 
-// Sanitización para prevenir fallos al renderizar textos especiales
+function saveTasks() {
+  setSyncStatus('🟡 Guardando...', '#d83b01');
+  tasksRef.set(tasks)
+    .then(() => {
+      setSyncStatus('🟢 En línea', '#107c41');
+      localStorage.setItem('maintenanceTasks_backup', JSON.stringify(tasks));
+    })
+    .catch((error) => {
+      console.error("Error al guardar en la nube:", error);
+      setSyncStatus('🔴 Error red', '#a4262c');
+    });
+}
+
+tasksRef.on('value', (snapshot) => {
+  const data = snapshot.val();
+  if (data && Array.isArray(data)) {
+    tasks = data;
+  } else if (data && typeof data === 'object') {
+    tasks = Object.values(data);
+  } else {
+    tasks = [];
+  }
+  setSyncStatus('🟢 En línea', '#107c41');
+  renderTasks();
+});
+
+// =======================================================
+// MOTOR DE COMPRESIÓN DE IMÁGENES
+// =======================================================
+function compressImage(file, callback) {
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      const canvas = document.createElement('canvas');
+      const maxDim = 800;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      callback(compressedDataUrl);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// Subir fotos a la TAREA PRINCIPAL
+function addPhotosToTask(taskId, event) {
+  const files = Array.from(event.target.files);
+  if (!files || files.length === 0) return;
+
+  const task = tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (!task.photos) task.photos = [];
+
+  let processed = 0;
+  files.forEach(file => {
+    compressImage(file, (dataUrl) => {
+      task.photos.push(dataUrl);
+      processed++;
+      if (processed === files.length) {
+        saveTasks();
+      }
+    });
+  });
+}
+
+// Eliminar foto de la TAREA PRINCIPAL
+function removePhotoFromTask(taskId, photoIndex) {
+  const task = tasks.find(t => t.id === taskId);
+  if (task && task.photos && task.photos[photoIndex]) {
+    if (confirm('¿Eliminar esta imagen de la tarea?')) {
+      task.photos.splice(photoIndex, 1);
+      saveTasks();
+    }
+  }
+}
+
+// Subir fotos a una SUBTAREA
+function addPhotosToSubtask(taskId, subtaskId, event) {
+  const files = Array.from(event.target.files);
+  if (!files || files.length === 0) return;
+
+  const task = tasks.find(t => t.id === taskId);
+  if (!task || !task.subtasks) return;
+
+  const subtask = task.subtasks.find(s => s.id === subtaskId);
+  if (!subtask) return;
+  if (!subtask.photos) subtask.photos = [];
+
+  let processed = 0;
+  files.forEach(file => {
+    compressImage(file, (dataUrl) => {
+      subtask.photos.push(dataUrl);
+      processed++;
+      if (processed === files.length) {
+        saveTasks();
+      }
+    });
+  });
+}
+
+// Eliminar foto de una SUBTAREA
+function removePhotoFromSubtask(taskId, subtaskId, photoIndex) {
+  const task = tasks.find(t => t.id === taskId);
+  if (!task || !task.subtasks) return;
+
+  const subtask = task.subtasks.find(s => s.id === subtaskId);
+  if (subtask && subtask.photos && subtask.photos[photoIndex]) {
+    if (confirm('¿Eliminar esta imagen de la subtarea?')) {
+      subtask.photos.splice(photoIndex, 1);
+      saveTasks();
+    }
+  }
+}
+
+// =======================================================
+// VISOR DE FOTOS PANTALLA COMPLETA
+// =======================================================
+function openPhotoModal(imgSrc, caption) {
+  const modal = document.getElementById('photoModal');
+  const modalImg = document.getElementById('photoModalImg');
+  const modalCaption = document.getElementById('photoModalCaption');
+  if (!modal || !modalImg) return;
+
+  modalImg.src = imgSrc;
+  if (modalCaption) modalCaption.textContent = caption || 'Fotografía de intervención';
+  modal.style.display = 'flex';
+}
+
+function closePhotoModal() {
+  const modal = document.getElementById('photoModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// =======================================================
+// UTILIDADES
+// =======================================================
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text || '';
   return div.innerHTML;
 }
 
-// Fecha local YYYY-MM-DD
 function getLocalTodayString() {
   const now = new Date();
   const year = now.getFullYear();
@@ -28,7 +203,7 @@ function getLocalTodayString() {
 }
 
 // =======================================================
-// CONTROL DE ACCESO (OPERARIO / SUPERVISOR)
+// MODO SUPERVISOR
 // =======================================================
 function toggleAdminMode() {
   const btn = document.getElementById('btnAdminAuth');
@@ -58,7 +233,7 @@ function toggleAdminMode() {
 }
 
 // =======================================================
-// TAREAS (CREAR, MARCAR, EDITAR, BORRAR)
+// OPERACIONES DE TAREAS
 // =======================================================
 function addTask() {
   if (!isAdmin) {
@@ -86,6 +261,7 @@ function addTask() {
     group: taskGroup ? taskGroup.value : 'ENGIE',
     date: taskDate ? taskDate.value : '',
     completed: false,
+    photos: [],
     subtasks: []
   };
 
@@ -94,11 +270,8 @@ function addTask() {
 
   if (taskInput) taskInput.value = '';
   if (taskDate) taskDate.value = '';
-
-  renderTasks();
 }
 
-// Los operarios pueden tildar/destildar sin clave
 function toggleTask(id) {
   const task = tasks.find(t => t.id === id);
   if (task) {
@@ -107,7 +280,6 @@ function toggleTask(id) {
       task.subtasks.forEach(sub => sub.completed = task.completed);
     }
     saveTasks();
-    renderTasks();
   }
 }
 
@@ -124,7 +296,6 @@ function editTask(id) {
   if (newText !== null && newText.trim() !== '') {
     task.text = newText.trim();
     saveTasks();
-    renderTasks();
   }
 }
 
@@ -146,7 +317,6 @@ function deleteTask(id) {
   if (confirm(mensaje)) {
     tasks = tasks.filter(t => t.id !== id);
     saveTasks();
-    renderTasks();
   }
 }
 
@@ -157,10 +327,9 @@ function deleteAllTasks() {
   }
 
   if (tasks.length === 0) return;
-  if (confirm('¿Estás seguro de que deseas eliminar todas las tareas registradas?')) {
+  if (confirm('¿Estás seguro de que deseas eliminar todas las tareas registradas en la nube?')) {
     tasks = [];
     saveTasks();
-    renderTasks();
   }
 }
 
@@ -188,7 +357,8 @@ function addSubtask(taskId) {
       id: Date.now(),
       text: text,
       assignee: assignee || 'Sin asignar',
-      completed: false
+      completed: false,
+      photos: []
     });
 
     if (task.completed) {
@@ -196,11 +366,9 @@ function addSubtask(taskId) {
     }
 
     saveTasks();
-    renderTasks();
   }
 }
 
-// Operarios pueden tildar subtareas libremente
 function toggleSubtask(taskId, subtaskId) {
   const task = tasks.find(t => t.id === taskId);
   if (task && task.subtasks) {
@@ -211,7 +379,6 @@ function toggleSubtask(taskId, subtaskId) {
       task.completed = allSubtasksDone;
 
       saveTasks();
-      renderTasks();
     }
   }
 }
@@ -234,12 +401,11 @@ function deleteSubtask(taskId, subtaskId) {
       task.completed = task.subtasks.every(s => s.completed);
     }
     saveTasks();
-    renderTasks();
   }
 }
 
 // =======================================================
-// PROGRESO Y CONTADORES DE PENDIENTES
+// PROGRESO Y CONTADORES
 // =======================================================
 function updateProgress() {
   const progressBar = document.getElementById('progressBar');
@@ -270,7 +436,6 @@ function updateProgress() {
   progressText.textContent = `${percentage}% (${completedUnits}/${totalUnits})`;
 }
 
-// Cuenta solo las tareas que quedan pendientes (por hacer)
 function updateGroupCounters() {
   const countersContainer = document.getElementById('groupCounters');
   const groupFilter = document.getElementById('groupFilter');
@@ -332,6 +497,11 @@ function exportTasks() {
 }
 
 function importTasks(event) {
+  if (!isAdmin) {
+    alert('Acción restringida: Se requiere modo Supervisor.');
+    return;
+  }
+
   const file = event.target.files[0];
   if (!file) return;
 
@@ -342,8 +512,7 @@ function importTasks(event) {
       if (Array.isArray(imported)) {
         tasks = imported;
         saveTasks();
-        renderTasks();
-        alert('Tareas importadas correctamente.');
+        alert('Tareas importadas y sincronizadas.');
       } else {
         alert('El archivo no contiene un formato de tareas válido.');
       }
@@ -355,7 +524,7 @@ function importTasks(event) {
 }
 
 // =======================================================
-// RENDERIZADO PRINCIPAL
+// RENDERIZADO
 // =======================================================
 function renderTasks() {
   const taskList = document.getElementById('taskList');
@@ -384,6 +553,7 @@ function renderTasks() {
 
   filteredTasks.forEach(task => {
     if (!task.subtasks) task.subtasks = [];
+    if (!task.photos) task.photos = [];
 
     const totalSubs = task.subtasks.length;
     const completedSubs = task.subtasks.filter(s => s.completed).length;
@@ -399,21 +569,53 @@ function renderTasks() {
       }
     }
 
-    const subtasksHtml = task.subtasks.map(sub => `
-      <li class="subtask-item">
-        <div class="subtask-left">
-          <input 
-            type="checkbox" 
-            class="subtask-checkbox" 
-            ${sub.completed ? 'checked' : ''} 
-            onchange="toggleSubtask(${task.id}, ${sub.id})"
-          >
-          <span class="subtask-text ${sub.completed ? 'completed' : ''}">${escapeHtml(sub.text)}</span>
-          <span class="subtask-assignee">👤 ${escapeHtml(sub.assignee || 'Sin asignar')}</span>
-        </div>
-        <button type="button" class="subtask-delete-btn admin-only" onclick="deleteSubtask(${task.id}, ${sub.id})" title="Eliminar subtarea">✕</button>
-      </li>
+    // Miniaturas de la tarea principal
+    const taskPhotosHtml = task.photos.map((photo, index) => `
+      <div class="photo-thumb-box">
+        <img src="${photo}" class="photo-thumb" onclick="openPhotoModal('${photo}', 'Tarea: ${escapeHtml(task.text)} (Foto ${index + 1})')" title="Ver foto ampliada">
+        <button type="button" class="photo-remove-btn" onclick="removePhotoFromTask(${task.id}, ${index})" title="Eliminar foto">✕</button>
+      </div>
     `).join('');
+
+    // Subtareas con botón azul [añadir imagen]
+    const subtasksHtml = task.subtasks.map(sub => {
+      if (!sub.photos) sub.photos = [];
+
+      const subtaskPhotosHtml = sub.photos.map((photo, pIdx) => `
+        <div class="photo-thumb-box photo-thumb-box-subtask">
+          <img src="${photo}" class="photo-thumb" onclick="openPhotoModal('${photo}', 'Subtarea: ${escapeHtml(sub.text)} (Foto ${pIdx + 1})')" title="Ver foto">
+          <button type="button" class="photo-remove-btn" onclick="removePhotoFromSubtask(${task.id}, ${sub.id}, ${pIdx})" title="Eliminar foto">✕</button>
+        </div>
+      `).join('');
+
+      return `
+        <li class="subtask-item">
+          <div class="subtask-top-row">
+            <div class="subtask-left">
+              <input 
+                type="checkbox" 
+                class="subtask-checkbox" 
+                ${sub.completed ? 'checked' : ''} 
+                onchange="toggleSubtask(${task.id}, ${sub.id})"
+              >
+              <span class="subtask-text ${sub.completed ? 'completed' : ''}">${escapeHtml(sub.text)}</span>
+              <span class="subtask-assignee">👷 ${escapeHtml(sub.assignee || 'Sin asignar')}</span>
+            </div>
+            
+            <div class="subtask-actions-right">
+              <!-- BOTÓN AZUL COMPACTO PARA SUBTAREA -->
+              <label class="btn-add-img btn-add-img-subtask" title="Adjuntar fotos a la subtarea">
+                📷 [añadir imagen]
+                <input type="file" accept="image/*" multiple capture="environment" style="display: none;" onchange="addPhotosToSubtask(${task.id}, ${sub.id}, event)">
+              </label>
+              <button type="button" class="subtask-delete-btn admin-only" onclick="deleteSubtask(${task.id}, ${sub.id})" title="Eliminar subtarea">✕</button>
+            </div>
+          </div>
+
+          ${sub.photos.length > 0 ? `<div class="photo-gallery" style="margin-left: 23px;">${subtaskPhotosHtml}</div>` : ''}
+        </li>
+      `;
+    }).join('');
 
     const li = document.createElement('li');
     li.className = 'task-item';
@@ -439,6 +641,16 @@ function renderTasks() {
         </div>
       </div>
 
+      <!-- BOTÓN AZUL PRINCIPAL DE LA TAREA -->
+      <div style="margin-left: 30px; display: flex; flex-direction: column; gap: 6px;">
+        <label class="btn-add-img" title="Adjuntar fotos a la tarea">
+          📷 [añadir imagen]
+          <input type="file" accept="image/*" multiple capture="environment" style="display: none;" onchange="addPhotosToTask(${task.id}, event)">
+        </label>
+        
+        ${task.photos.length > 0 ? `<div class="photo-gallery">${taskPhotosHtml}</div>` : ''}
+      </div>
+
       <div class="subtasks-container">
         <div class="subtask-counter">Subtareas: ${completedSubs}/${totalSubs}</div>
         <ul class="subtask-list">
@@ -456,7 +668,7 @@ function renderTasks() {
             type="text" 
             id="subtask-assignee-${task.id}" 
             class="subtask-assignee-input"
-            placeholder="OPERARIO..." 
+            placeholder="Operario" 
             onkeypress="if(event.key === 'Enter') addSubtask(${task.id})"
           >
           <button type="button" onclick="addSubtask(${task.id})">+</button>

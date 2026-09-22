@@ -456,7 +456,7 @@ function renderTasks() {
             type="text" 
             id="subtask-assignee-${task.id}" 
             class="subtask-assignee-input"
-            placeholder="Responsable" 
+            placeholder="OPERARIO..." 
             onkeypress="if(event.key === 'Enter') addSubtask(${task.id})"
           >
           <button type="button" onclick="addSubtask(${task.id})">+</button>

